@@ -1,4 +1,6 @@
 provider "aws" {
+	access_key = "${var.aws_access_key}"
+	secret_key = "${var.aws_secret_key}"
 	region     = "us-east-1"
 }
 
@@ -71,7 +73,7 @@ resource "aws_security_group" "nat" {
 
 #Public Subnet
 resource "aws_subnet" "us-east-1a-public" {
-    vpc_id = "${aws_vpc.default.id}"
+    vpc_id = "${aws_vpc.vpc_export.id}"
 
     cidr_block = "${var.public_subnet_cidr}"
     availability_zone = "us-east-1a"
@@ -111,7 +113,7 @@ resource "aws_subnet" "us-east-1a-private" {
     }
 }
 resource "aws_route_table" "us-east-1a-private" {
-    vpc_id = "${aws_vpc.vpc-export.id}"
+    vpc_id = "${aws_vpc.vpc_export.id}"
 
     route {
         cidr_block = "0.0.0.0/0"
@@ -133,6 +135,7 @@ resource "aws_route_table_association" "us-east-1a-private" {
 resource "aws_instance" "app_server" {
         ami = "${var.amis}"
         instance_type = "${var.instance_type}"
+					security_groups			 = ["${aws_security_group.appserver_group.name}"]
 
  tags {
 		Name = "App_Server-Export"
@@ -149,8 +152,8 @@ resource "aws_db_instance" "db_server" {
   name                 = "${var.dbname}"
   username             = "${var.dbuser}"
   password             = "${var.dbpass}"
-	db_subnet_group_nam  = "${aws_subnet.us-east-1a-private.name}"
-
+	db_subnet_group_name = "${aws_subnet.us-east-1a-private.id}"
+	security_group_names = ["${aws_security_group.dbserver_group.name}"]
  tags {
 		Name = "DB_Server-Export"
  }
@@ -163,10 +166,6 @@ resource "aws_launch_configuration" "web_launch_conf" {
   instance_type = "${var.instance_type}"
 	key_name			= "${var.key}"
 
-
-tags {
-		Name = "Launchcfg-Export"
-	}
 
 	}
 
@@ -190,8 +189,9 @@ tags {
 
 #Load Balancer
 resource "aws_elb" "webserver" {
-	name               = "elb_export"
-  availability_zones = ["us-east-1a"]
+	name               	= "ELBexport"
+  availability_zones 	= ["us-east-1a"]
+	security_groups 		= ["${aws_security_group.dbserver_group.name}"]
 
 	listener {
     instance_port     = "${var.port}"
