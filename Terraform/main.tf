@@ -117,8 +117,8 @@ resource "aws_route_table" "us-east-1a-private" {
 
     route {
         cidr_block = "0.0.0.0/0"
-#####   instance_id = "${aws_instance.nat.id}"
-    }
+				gateway_id = "${aws_internet_gateway.gw_export.id}"
+		}
 
     tags {
         Name = "Private Subnet"
@@ -135,7 +135,16 @@ resource "aws_route_table_association" "us-east-1a-private" {
 resource "aws_instance" "app_server" {
         ami = "${var.amis}"
         instance_type = "${var.instance_type}"
-					security_groups			 = ["${aws_security_group.appserver_group.name}"]
+				vpc_security_group_ids	 = ["${aws_security_group.appserver_group.id}"]
+				subnet_id = "${aws_subnet.us-east-1a-public.id}"
+
+#Installing Tomcat
+				user_data = <<-EOF
+										#!/bin/bash
+										sudo yum install -y tomcat
+										sudo service tomcat start
+										EOF
+
 
  tags {
 		Name = "App_Server-Export"
@@ -153,7 +162,8 @@ resource "aws_db_instance" "db_server" {
   username             = "${var.dbuser}"
   password             = "${var.dbpass}"
 	db_subnet_group_name = "${aws_subnet.us-east-1a-private.id}"
-	security_group_names = ["${aws_security_group.dbserver_group.name}"]
+	vpc_security_group_ids = ["${aws_security_group.dbserver_group.id}"]
+
  tags {
 		Name = "DB_Server-Export"
  }
@@ -165,6 +175,24 @@ resource "aws_launch_configuration" "web_launch_conf" {
   image_id      = "${var.amis}"
   instance_type = "${var.instance_type}"
 	key_name			= "${var.key}"
+
+	user_data = <<-EOF
+									#!/bin/bash
+									sudo touch /var/www/html/index.html
+									sudo chmod 766 /var/www/html/index.html
+
+									sudo echo '
+									<html>
+									<head>
+									<title>Welcome to Export Program!</title>
+									</head>
+									<body>
+									<h1>Success! The apache is working on '$HOSTNAME '</h1>
+									</body>
+									</html>
+									' > /var/www/html/index.html
+							EOF
+
 
 
 	}
@@ -180,18 +208,15 @@ resource "aws_launch_configuration" "web_launch_conf" {
   launch_configuration      = "${aws_launch_configuration.web_launch_conf.name}"
   vpc_zone_identifier       = ["${aws_subnet.us-east-1a-public.id}"]
 	load_balancers						= ["${aws_elb.webserver.name}"]
+	availability_zones				= ["us-east-1a"]
 
- tags {
-		Name = "ASG-Export"
-	}
-
-}
+ }
 
 #Load Balancer
 resource "aws_elb" "webserver" {
 	name               	= "ELBexport"
-  availability_zones 	= ["us-east-1a"]
-	security_groups 		= ["${aws_security_group.dbserver_group.name}"]
+  security_groups 		= ["${aws_security_group.webserver_group.id}"]
+	subnets							= ["${aws_subnet.us-east-1a-public.id}"]
 
 	listener {
     instance_port     = "${var.port}"
