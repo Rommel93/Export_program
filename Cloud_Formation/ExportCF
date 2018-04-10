@@ -191,6 +191,11 @@
         "ELBExport": {
             "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
             "Properties": {
+                "SecurityGroups": [
+                    {
+                        "Ref": "WebserverGroup"
+                    }
+                ],
                 "AvailabilityZones": {
                     "Ref": "AVZ"
                 },
@@ -249,8 +254,8 @@
                     "height": 60
                 },
                 "position": {
-                    "x": 120,
-                    "y": 60
+                    "x": 140,
+                    "y": 90
                 },
                 "z": 1,
                 "embeds": []
@@ -265,7 +270,10 @@
                     "y": -10
                 },
                 "z": 1,
-                "embeds": []
+                "embeds": [],
+                "isassociatedwith": [
+                    "3a65dbc5-e4c4-4128-a14f-51676456200c"
+                ]
             },
             "cff2657f-69eb-42a3-a2bc-1c67a659158f": {
                 "size": {
