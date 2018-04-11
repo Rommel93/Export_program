@@ -21,56 +21,6 @@ resource "aws_internet_gateway" "gw_export" {
     vpc_id = "${aws_vpc.vpc_export.id}"
 }
 
-#Nat
-resource "aws_security_group" "nat" {
-    name = "vpc_nat"
-    description = "Allow traffic to pass from the private subnet to the internet"
-
-    ingress {
-        from_port = 80
-        to_port = 80
-        protocol = "tcp"
-        cidr_blocks = ["${var.private_subnet_cidr}"]
-    }
-    ingress {
-        from_port = 22
-        to_port = 22
-        protocol = "tcp"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-    ingress {
-        from_port = -1
-        to_port = -1
-        protocol = "icmp"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-
-    egress {
-        from_port = 80
-        to_port = 80
-        protocol = "tcp"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-    egress {
-        from_port = 22
-        to_port = 22
-        protocol = "tcp"
-        cidr_blocks = ["${var.vpc_cidr}"]
-    }
-    egress {
-        from_port = -1
-        to_port = -1
-        protocol = "icmp"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-
-    vpc_id = "${aws_vpc.vpc_export.id}"
-
-    tags {
-        Name = "NATSG"
-    }
-}
-
 #Public Subnet
 resource "aws_subnet" "us-east-1a-public" {
     vpc_id = "${aws_vpc.vpc_export.id}"
@@ -106,7 +56,7 @@ resource "aws_route_table_association" "us-east-1a-public" {
 resource "aws_subnet" "us-east-1a-private" {
     vpc_id = "${aws_vpc.vpc_export.id}"
     cidr_block = "${var.private_subnet_cidr}"
-    availability_zone = "us-east-1a"
+    availability_zone = "us-east-1b"
 
     tags {
         Name = "Private Subnet"
@@ -152,6 +102,15 @@ resource "aws_instance" "app_server" {
 }
 
 #DB Server
+resource "aws_db_subnet_group" "db_private" {
+  name       = "main"
+  subnet_ids = ["${aws_subnet.us-east-1a-private.id}","${aws_subnet.us-east-1a-public.id}" ]
+
+  tags {
+    Name = "My DB subnet group"
+  }
+}
+
 resource "aws_db_instance" "db_server" {
 	allocated_storage    = 10
   storage_type         = "gp2"
@@ -161,7 +120,7 @@ resource "aws_db_instance" "db_server" {
   name                 = "${var.dbname}"
   username             = "${var.dbuser}"
   password             = "${var.dbpass}"
-	db_subnet_group_name = "${aws_subnet.us-east-1a-private.id}"
+	db_subnet_group_name = "${aws_db_subnet_group.db_private.id}"
 	vpc_security_group_ids = ["${aws_security_group.dbserver_group.id}"]
 
  tags {
