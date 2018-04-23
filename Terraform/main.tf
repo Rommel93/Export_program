@@ -122,6 +122,7 @@ resource "aws_db_instance" "db_server" {
   password             = "${var.dbpass}"
 	db_subnet_group_name = "${aws_db_subnet_group.db_private.id}"
 	vpc_security_group_ids = ["${aws_security_group.dbserver_group.id}"]
+	skip_final_snapshot = "true"
 
  tags {
 		Name = "DB_Server-Export"
