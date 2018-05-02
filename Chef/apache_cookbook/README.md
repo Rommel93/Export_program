@@ -1,3 +1,3 @@
-# learn_chef_apache2
+### Apache Centos
 
-This basic cookbook configures Apache on Ubuntu.
+This basic cookbook configures Apache on Centos.
